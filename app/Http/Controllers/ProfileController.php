@@ -3,10 +3,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\ProfileUpdateRequest; // Dia Ambil data yang sudah di Validasi dari Form
+use Illuminate\Http\RedirectResponse; 
+use Illuminate\Http\Request;            //Ini Request biasa 
+use Illuminate\Support\Facades\Auth;   //Logout User ✔️
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -14,140 +14,145 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Menampilkan form edit profil.
-     */
-    public function edit(Request $request): View
+
+    public function edit(Request $request): View // Menampilkan form edit Profile
     {
         return view('profile.edit', [
-            // Kirim data user yang sedang login ke view
-            'user' => $request->user(),
+            'user' => $request->user(), //Ambil data dari User yang sedang Login
         ]);
     }
 
-    /**
-     * Mengupdate informasi profil user.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
-    {
-        $user = $request->user();
 
-        // 1. Handle Upload Avatar
-        // Cek apakah user mengupload file baru di input 'avatar'?
-        if ($request->hasFile('avatar')) {
-            // Upload file baru dan dapatkan path-nya (e.g., avatars/xxx.jpg)
-            $avatarPath = $this->uploadAvatar($request, $user);
 
-            // Simpan path ke properti model, tapi belum di-save ke DB (masih di memory)
-            $user->avatar = $avatarPath;
-        }
 
-        // 2. Update Data Text (Nama, Email, dll)
-        // fill() mengisi atribut model dengan data validasi, tapi belum disimpan ke DB.
-        // Ini lebih aman daripada $user->update() langsung karena kita mau cek 'isDirty' dulu.
-        $user->fill($request->validated());
 
-        // 3. Cek Perubahan Email
-        // Jika email berubah, kita harus membatalkan status verifikasi email (isDirty cek perubahan di memory).
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
 
-        // 4. Simpan ke Database
-        // Method save() baru benar-benar menjalankan query UPDATE ke database.
-        $user->save();
+public function update(ProfileUpdateRequest $request): RedirectResponse
+{
+    $user = $request->user();
 
-        return Redirect::route('profile.edit')
-            ->with('success', 'Profil berhasil diperbarui!');
+    $user->fill(
+        $request->safe()->except('avatar')
+    );
+
+    if ($user->isDirty('email')) {
+        $user->email_verified_at = null;
     }
 
-    /**
-     * Helper khusus untuk menangani logika upload avatar.
-     * Mengembalikan string path file yang tersimpan.
-     */
-    protected function uploadAvatar(ProfileUpdateRequest $request, $user): string
-    {
-        // Hapus avatar lama (Garbage Collection)
-        // Cek 1: Apakah user punya avatar sebelumnya?
-        // Cek 2: Apakah file fisiknya benar-benar ada di storage 'public'?
-        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
-        }
+    $user->save();
 
-        // Generate nama file unik untuk mencegah bentrok nama.
-        // Format: avatar-{user_id}-{timestamp}.{ext}
-        $filename = 'avatar-' . $user->id . '-' . time() . '.' . $request->file('avatar')->extension();
+    return back()->with('success', 'Profil berhasil diperbarui!');
+}
+            
 
-        // Simpan file ke folder: storage/app/public/avatars
-        // return path relatif: "avatars/namafile.jpg"
-        $path = $request->file('avatar')->storeAs('avatars', $filename, 'public');
 
-        return $path;
+
+
+
+
+
+    protected function uploadAvatar(Request $request, $user): string
+{
+    if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+        Storage::disk('public')->delete($user->avatar);
     }
 
-    /**
-     * Menghapus avatar (tombol "Hapus Foto").
-     */
+    $filename = 'avatar-' . $user->id . '-' . time() . '.' . $request->file('avatar')->extension();
+
+    return $request->file('avatar')->storeAs(
+        'avatars',
+        $filename,
+        'public'
+    );
+}
+
+
+
+
+
+
     public function deleteAvatar(Request $request): RedirectResponse
     {
         $user = $request->user();
 
-        // Hapus file fisik
         if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
-
-            // Set kolom di database jadi NULL
-            $user->update(['avatar' => null]);
+            Storage::disk('public')->delete($user->avatar); // Hapus Avatar
+            $user->update(['avatar' => null]);  // jika avatar tidak ada set NULL
         }
-
         return back()->with('success', 'Foto profil berhasil dihapus.');
     }
 
 
-    /**
-     * Update password user.
-     */
+
+
+
     public function updatePassword(Request $request): RedirectResponse
     {
         $validated = $request->validateWithBag('updatePassword', [
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', 'min:8'],
         ]);
-
         $request->user()->update([
-            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']), //Sajikan Valiadsi ulang
         ]);
-
-        return back()->with('status', 'password-updated');
+        return back()->with('status', 'password-updated'); //Update ketika selesai
     }
 
-    /**
-     * Menghapus akun user permanen.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        // Validasi password untuk keamanan sebelum hapus akun
+
+
+
+
+
+
+
+    public function destroy(Request $request): RedirectResponse //Hapus akun dan semua nya
+    { 
         $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
+            'password' => ['required', 'current_password'], //Pastikan dia beneran user minta password
         ]);
-
         $user = $request->user();
+        Auth::logout();  //Logout User
 
-        // Logout dulu
-        Auth::logout();
-
-        // Hapus avatar fisik user sebelum hapus data user
         if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
+            Storage::disk('public')->delete($user->avatar);  //Hapus avatar tersedia
         }
 
-        // Hapus data user dari DB
-        $user->delete();
-
-        // Invalidate session agar tidak bisa dipakai lagi (Security)
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
+        $user->delete(); // HAPUS!
+        $request->session()->invalidate();  // Invalidasi
+        $request->session()->regenerateToken();  // Buat Ulang Token Login
+        return Redirect::to('/'); // Kembalikan ke entry Lobby
     }
+
+
+    public function updateAvatar(Request $request): RedirectResponse
+        {
+            $request->validate([
+                'avatar' => [
+                    'required',
+                    'image',
+                    'mimes:jpeg,jpg,png,webp',
+                    'max:2048',
+                ],
+            ]);
+
+            $user = $request->user();
+
+            $avatarPath = $this->uploadAvatar($request, $user);
+            $user->update(['avatar' => $avatarPath]);
+
+            return back()->with('success', 'Foto profil berhasil diperbarui.');
+        }
+
+
+        public function unlinkGoogle(Request $request): RedirectResponse
+            {
+                $user = $request->user();
+
+                $user->google_id = null;
+                $user->save();
+
+                return back()->with('success', 'Koneksi dengan Google berhasil diputus.');
+            }
+
+
 }

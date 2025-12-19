@@ -1,53 +1,76 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Profil Saya') }}
-        </h2>
-    </x-slot>
+{{-- resources/views/profile/edit.blade.php --}}
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+@extends('layouts.app')
+
+@section('content')
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+
+            <h2 class="h3 fw-bold mb-4 text-dark">
+                Profil Saya
+            </h2>
+
             {{-- Success Message --}}
             @if (session('success'))
-                <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
                     {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
-            {{-- Avatar Section --}}
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-avatar-form')
+            {{-- 1. Avatar Information --}}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-secondary">Foto Profil</h6>
+                </div>
+                <div class="card-body p-4">
+                    {{-- @include('profile.partials.update-avatar-form') --}}
+                    @include('profile.partials.avatar')
                 </div>
             </div>
 
-            {{-- Profile Information --}}
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
+            {{-- 2. Profile Information --}}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-secondary">Informasi Profil</h6>
+                </div>
+                <div class="card-body p-4">
                     @include('profile.partials.update-profile-information-form')
                 </div>
             </div>
 
-            {{-- Update Password --}}
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
+            {{-- 3. Update Password --}}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-secondary">Update Password</h6>
+                </div>
+                <div class="card-body p-4">
                     @include('profile.partials.update-password-form')
                 </div>
             </div>
 
-            {{-- Connected Accounts --}}
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
+            {{-- 4. Connected Accounts --}}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-secondary">Akun Terhubung</h6>
+                </div>
+                <div class="card-body p-4">
                     @include('profile.partials.connected-accounts')
                 </div>
             </div>
 
-            {{-- Delete Account --}}
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
+            {{-- 5. Delete Account --}}
+            <div class="card shadow-sm border-danger mb-4">
+                <div class="card-header bg-danger text-white py-3">
+                    <h6 class="mb-0 fw-bold">Hapus Akun</h6>
+                </div>
+                <div class="card-body p-4">
                     @include('profile.partials.delete-user-form')
                 </div>
             </div>
+
         </div>
     </div>
-</x-app-layout>
+</div>
+@endsection

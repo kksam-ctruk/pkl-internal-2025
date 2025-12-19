@@ -44,7 +44,7 @@
 
                 @auth
                     {{-- Wishlist --}}
-                    <li class="nav-item">
+                    {{-- <li class="nav-item">
                         <a class="nav-link position-relative" href="{{ route('wishlist.index') }}">
                             <i class="bi bi-heart"></i>
                             @if(auth()->user()->wishlists()->count() > 0)
@@ -53,7 +53,7 @@
                                 </span>
                             @endif
                         </a>
-                    </li>
+                    </li> --}}
 
                     {{-- Cart --}}
                     <li class="nav-item">
@@ -88,9 +88,9 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{{ route('orders.index') }}">
+                                {{-- <a class="dropdown-item" href="{{ route('orders.index') }}">
                                     <i class="bi bi-bag me-2"></i> Pesanan Saya
-                                </a>
+                                </a> --}}
                             </li>
                             @if(auth()->user()->isAdmin())
                                 <li><hr class="dropdown-divider"></li>
