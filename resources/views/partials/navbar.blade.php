@@ -21,13 +21,12 @@
         {{-- Navbar Content --}}
         <div class="collapse navbar-collapse" id="navbarMain">
             {{-- Search Form --}}
-            <form class="d-flex mx-auto" style="max-width: 400px; width: 100%;"
-                  action="{{ route('catalog.index') }}" method="GET">
+            <form class="d-flex mx-auto" style="max-width: 400px; width: 100%;">
                 <div class="input-group">
                     <input type="text" name="q"
                            class="form-control"
                            placeholder="Cari produk..."
-                           value="{{ request('q') }}">
+                           >
                     <button class="btn btn-outline-primary" type="submit">
                         <i class="bi bi-search"></i>
                     </button>
@@ -38,7 +37,7 @@
             <ul class="navbar-nav ms-auto align-items-center">
                 {{-- Katalog --}}
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('catalog.index') }}">
+                    <a class="nav-link" href="">
                         <i class="bi bi-grid me-1"></i> Katalog
                     </a>
                 </li>
@@ -125,5 +124,6 @@
                 @endauth
             </ul>
         </div>
+        
     </div>
 </nav>

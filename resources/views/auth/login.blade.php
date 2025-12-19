@@ -130,7 +130,7 @@ ditampilkan di @yield('content') --}}
               >
                 Daftar Sekarang
               </a>
-            </p>
+          </p>
           </form>
         </div>
       </div>

@@ -1,61 +1,53 @@
-{{-- resources/views/profile/edit.blade.php --}}
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Profil Saya') }}
+        </h2>
+    </x-slot>
 
-@extends('layouts.app')
-
-@section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <h2 class="mb-4">Profil Saya</h2>
-
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            {{-- Success Message --}}
             @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
                     {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
-            {{-- 1. Avatar Information --}}
-            <div class="card mb-4">
-                <div class="card-header bg-white fw-bold">Foto Profil</div>
-                <div class="card-body">
+            {{-- Avatar Section --}}
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <div class="max-w-xl">
                     @include('profile.partials.update-avatar-form')
                 </div>
             </div>
 
-            {{-- 2. Profile Information --}}
-            <div class="card mb-4">
-                <div class="card-header bg-white fw-bold">Informasi Profil</div>
-                <div class="card-body">
+            {{-- Profile Information --}}
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <div class="max-w-xl">
                     @include('profile.partials.update-profile-information-form')
                 </div>
             </div>
 
-            {{-- 3. Update Password --}}
-            <div class="card mb-4">
-                <div class="card-header bg-white fw-bold">Update Password</div>
-                <div class="card-body">
+            {{-- Update Password --}}
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <div class="max-w-xl">
                     @include('profile.partials.update-password-form')
                 </div>
             </div>
 
-            {{-- 4. Connected Accounts --}}
-            <div class="card mb-4">
-                <div class="card-header bg-white fw-bold">Akun Terhubung</div>
-                <div class="card-body">
+            {{-- Connected Accounts --}}
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <div class="max-w-xl">
                     @include('profile.partials.connected-accounts')
                 </div>
             </div>
 
-            {{-- 5. Delete Account --}}
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white fw-bold">Hapus Akun</div>
-                <div class="card-body">
+            {{-- Delete Account --}}
+            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+                <div class="max-w-xl">
                     @include('profile.partials.delete-user-form')
                 </div>
             </div>
-
         </div>
     </div>
-</div>
-@endsection
+</x-app-layout>
