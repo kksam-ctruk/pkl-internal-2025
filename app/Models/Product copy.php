@@ -37,14 +37,42 @@ class Product extends Model
         'is_featured' => 'boolean',
     ];
 
+    // ==================== BOOT ====================
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($product) {
+            if (empty($product->slug)) {
+                $product->slug = Str::slug($product->name);
+
+                // Pastikan slug unik
+                $count = static::where('slug', 'like', $product->slug . '%')->count();
+                if ($count > 0) {
+                    $product->slug .= '-' . ($count + 1);
+                }
+            }
+        });
+
+        // logika untuk updating slug jika nama berubah
+        static::updating(function ($product) {
+            if ($product->isDirty('name')) {
+                $product->slug = Str::slug($product->name);
+                $count = static::where('slug', 'like', $product->slug . '%')
+                    ->where('id', '!=', $product->id)
+                    ->count();
+                if ($count > 0) {
+                    $product->slug .= '-' . ($count + 1);
+                }
+            }
+        });
+    }
+
     // ==================== RELATIONSHIPS ====================
 
     /**
-     * Relasi Inverse One-to-Many: Produk milik SATU Kategori.
-     *
-     * Laravel mendeteksi foreign key 'category_id' dari nama method 'category'.
-     *
-     * $product->category->name
+     * Produk termasuk dalam satu kategori.
      */
     public function category(): BelongsTo
     {
@@ -52,7 +80,7 @@ class Product extends Model
     }
 
     /**
-     * Relasi One-to-Many: Produk punya BANYAK gambar.
+     * Produk memiliki banyak gambar.
      */
     public function images(): HasMany
     {
@@ -60,7 +88,7 @@ class Product extends Model
     }
 
     /**
-     * Relasi One-to-One: Mengambil gambar UTAMA saja.
+     * Gambar utama produk.
      * Menggunakan where('is_primary', true) untuk filter.
      */
     public function primaryImage(): HasOne
@@ -76,6 +104,9 @@ class Product extends Model
         return $this->hasOne(ProductImage::class)->oldestOfMany('sort_order');
     }
 
+    /**
+     * Item pesanan yang mengandung produk ini.
+     */
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
@@ -94,65 +125,89 @@ class Product extends Model
     // ==================== ACCESSORS ====================
 
     /**
-     * Accessor: Display Price
-     * Logika: Jika ada diskon valid, tampilkan harga diskon. Jika tidak, harga normal.
+     * Harga yang ditampilkan (diskon atau normal).
+     */
+    /**
+     * ACCESSOR: Harga yang ditampilkan (bisa diskon atau normal)
      *
-     * $product->display_price (returns float)
+     * Accessor adalah property VIRTUAL yang dihitung saat diakses.
+     * Tidak ada di database, tapi bisa diakses seperti kolom biasa.
+     *
+     * PENAMAAN:
+     * get{NamaAttribute}Attribute
+     * getDisplayPriceAttribute -> $product->display_price
+     *
+     * CARA PAKAI:
+     * $product->display_price   // 120000 (kalau diskon)
+     *                           // 150000 (kalau tidak diskon)
      */
     public function getDisplayPriceAttribute(): float
     {
+        // Cek apakah ada harga diskon DAN diskon lebih murah dari harga normal
         if ($this->discount_price !== null && $this->discount_price < $this->price) {
             return (float) $this->discount_price;
         }
+        // Jika tidak ada diskon, return harga normal
         return (float) $this->price;
     }
 
     /**
-     * Accessor: Formatted Price
-     * Format Rupiah: Rp 1.500.000
-     *
+     * Format harga untuk tampilan.
+     * Contoh: Rp 1.500.000
      * $product->formatted_price
-     */
+    */
     public function getFormattedPriceAttribute(): string
     {
         return 'Rp ' . number_format($this->display_price, 0, ',', '.');
     }
 
+
     /**
-     * Accessor: Formatted Original Price (Coret)
+     * Format harga asli (sebelum diskon).
      * Hanya digunakan jika produk diskon, untuk menampilkan harga asli yang dicoret.
-     */
+    */
     public function getFormattedOriginalPriceAttribute(): string
     {
         return 'Rp ' . number_format($this->price, 0, ',', '.');
     }
 
     /**
-     * Accessor: Cek apakah produk diskon?
-     * Return: true/false
-     */
-    public function getHasDiscountAttribute(): bool
-    {
-        return $this->discount_price !== null
-            && $this->discount_price > 0
-            && $this->discount_price < $this->price;
-    }
-
-    /**
-     * Accessor: Hitung % Diskon
-     * Rumus: (Diskon / Harga Asli) * 100
+     * ACCESSOR: Persentase diskon.
+     *
+     * CARA PAKAI:
+     * "Diskon {{ $product->discount_percentage }}%"  // "Diskon 20%"
      */
     public function getDiscountPercentageAttribute(): int
     {
         if (!$this->has_discount) {
             return 0;
         }
-
-        $discount = $this->price - $this->discount_price;
-        return (int) round(($discount / $this->price) * 100);
+        // Rumus: ((Harga Asli - Harga Diskon) / Harga Asli) * 100
+        // Contoh: ((150000 - 120000) / 150000) * 100 = 20%
+        return round((($this->price - $this->discount_price) / $this->price) * 100);
     }
 
     /**
+     * ACCESSOR: Cek apakah produk punya diskon.
+     *
+     * CARA PAKAI:
+     * @if($product->has_discount)
+     *     <span>SALE!</span>
+     * @endif
+     */
+    public function getHasDiscountAttribute(): bool
+    {
+         return $this->discount_price !== null
+             && $this->discount_price > 0
+             && $this->discount_price < $this->price;
+        // True jika:
+        // 1. discount_price tidak null (ada diisi)
+        // 2. DAN discount_price lebih kecil dari price (benar-benar diskon)
+    }
+
+    /**
+     * URL gambar utama atau placeholder.
+     * 
      * Accessor: Get Image URL (Smart)
      * Strategi:
      * 1. Cek Primary Image
@@ -162,17 +217,14 @@ class Product extends Model
      */
     public function getImageUrlAttribute(): string
     {
-        $image = $this->primaryImage ?? $this->firstImage ?? $this->images->first();
-
-        if ($image) {
-            return $image->image_url;
+        if ($this->primaryImage) {
+            return $this->primaryImage->image_path;
         }
-
-        return asset('images/no-product-image.jpg');
+        return asset('images/no-image.png');
     }
 
     /**
-     * Cek ketersediaan untuk tombol "Beli"
+     * Cek apakah produk tersedia (aktif dan ada stok).
      */
     public function getIsAvailableAttribute(): bool
     {
@@ -207,35 +259,53 @@ class Product extends Model
         return $this->weight . ' gram';
     }
 
-    // ==================== QUERY SCOPES ====================
+
+    // ==================== SCOPES ====================
 
     /**
-     * Scope: Pencarian Produk
-     * Menerima keyword, mencari di nama ATAU deskripsi.
-     *
-     * Product::search('samsung')->get();
+     * Filter produk aktif.
      */
-    public function scopeSearch($query, string $keyword)
+    public function scopeActive($query)
     {
-        return $query->where(function ($q) use ($keyword) {
-            $q->where('name', 'like', "%{$keyword}%")
-              ->orWhere('description', 'like', "%{$keyword}%");
-        });
+        return $query->where('is_active', true);
     }
 
-    // ... Scopes lainnya sama seperti sebelumnya ...
-    public function scopeActive($query) { return $query->where('is_active', true); }
-    public function scopeFeatured($query) { return $query->where('is_featured', true); }
-    public function scopeInStock($query) { return $query->where('stock', '>', 0); }
-
-    public function scopeAvailable($query)
+    /**
+     * Filter produk unggulan.
+     */
+    public function scopeFeatured($query)
     {
-        return $query->active()->inStock();
+        return $query->where('is_featured', true);
     }
 
+    /**
+     * SCOPE: Filter produk yang sedang diskon
+     *
+     * CARA PAKAI:
+     * Product::onSale()->get()  // Semua produk diskon
+     */
+    public function scopeOnSale($query)
+    {
+        return $query->whereNotNull('discount_price')
+                     ->whereColumn('discount_price', '<', 'price');
+        // ↑ whereColumn() membandingkan 2 kolom di database
+        //   Berbeda dengan where() yang membandingkan kolom dengan nilai
+    }
+
+    /**
+     * Filter produk yang tersedia (ada stok).
+     */
+    public function scopeInStock($query)
+    {
+        return $query->where('stock', '>', 0);
+    }
+
+    /**
+     * Filter berdasarkan kategori (menggunakan slug).
+     */
     public function scopeByCategory($query, string $categorySlug)
     {
-        return $query->whereHas('category', function ($q) use ($categorySlug) {
+        return $query->whereHas('category', function($q) use ($categorySlug) {
             $q->where('slug', $categorySlug);
         });
     }
@@ -245,6 +315,26 @@ class Product extends Model
         return $query->where('category_id', $categoryId);
     }
 
+    /**
+     * Pencarian produk.
+     */
+    public function scopeSearch($query, string $keyword)
+    {
+        return $query->where(function ($q) use ($keyword) {
+            $q->where('name', 'like', "%{$keyword}%")
+              ->orWhere('description', 'like', "%{$keyword}%");
+        });
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->active()->inStock();
+    }
+
+
+    /**
+     * Filter berdasarkan range harga.
+     */
     public function scopePriceRange($query, float $min, float $max)
     {
         return $query->whereBetween('price', [$min, $max]);
@@ -258,12 +348,6 @@ class Product extends Model
     public function scopeMaxPrice($query, float $max)
     {
         return $query->where('price', '<=', $max);
-    }
-
-    public function scopeOnSale($query)
-    {
-        return $query->whereNotNull('discount_price')
-                     ->whereColumn('discount_price', '<', 'price');
     }
 
     public function scopeSortBy($query, ?string $sort)
@@ -280,31 +364,6 @@ class Product extends Model
         };
     }
 
-    // ==================== BOOT METHOD ====================
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        // Auto-generate slug yang UNIK saat creating
-        static::creating(function ($product) {
-            if (empty($product->slug)) {
-                $baseSlug = Str::slug($product->name);
-                $slug = $baseSlug;
-                $counter = 1;
-
-                // Loop cek apakah slug sudah dipakai?
-                // Jika ya, tambahkan angka (contoh: produk-1, produk-2)
-                while (static::where('slug', $slug)->exists()) {
-                    $slug = $baseSlug . '-' . $counter;
-                    $counter++;
-                }
-
-                $product->slug = $slug;
-            }
-        });
-    }
-
     // ==================== HELPER METHODS ====================
 
     /**
@@ -319,7 +378,7 @@ class Product extends Model
         $this->decrement('stock', $quantity); // Query langsung: UPDATE products SET stock = stock - X
         return true;
     }
-
+    
     public function incrementStock(int $quantity): void
     {
         $this->increment('stock', $quantity);
@@ -329,4 +388,5 @@ class Product extends Model
     {
         return $this->stock >= $quantity;
     }
+
 }

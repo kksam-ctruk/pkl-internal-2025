@@ -132,3 +132,20 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
 
     });
+
+    Route::middleware(['auth', AdminMiddleware::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])
+            ->name('dashboard');
+
+        Route::get('/reports/sales', [ReportController::class, 'sales'])
+            ->name('reports.sales');
+    });
+// routes/web.php
+Route::prefix('admin')->middleware(['auth', 'admin'])->group(function() {
+    Route::get('users', [\App\Http\Controllers\Admin\UserController::class, 'index'])
+         ->name('admin.users.index');
+});

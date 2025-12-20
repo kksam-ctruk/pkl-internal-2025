@@ -104,9 +104,9 @@
 
                     <li class="nav-item">
                         <a href="{{ route('admin.reports.sales') }}"
-                           class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+                            class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                             <i class="bi bi-graph-up me-2"></i> Laporan Penjualan
-                        </a>
+                        </a> 
                     </li>
                 </ul>
             </nav>

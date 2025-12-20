@@ -4,7 +4,7 @@
 
 <form method="post" action="{{ route('profile.password.update') }}">
     @csrf
-    @method('put')
+    @method('patch')
 
     {{-- Current Password --}}
     <div class="mb-3">
